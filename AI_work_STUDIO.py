@@ -1,7 +1,9 @@
-import os
 import streamlit as st
-import streamlit.components.v1 as components
 from openai import OpenAI
+
+# =========================================================
+# 基本設定
+# =========================================================
 
 st.set_page_config(
     page_title="AI WORK STUDIO",
@@ -10,251 +12,282 @@ st.set_page_config(
 )
 
 st.title("💼 AI WORK STUDIO")
-st.caption("OpenAI連携・LP分析＆改善アシスタント")
+st.caption("LP分析・改善・HTML自動生成アシスタント")
 
-# APIキー確認
-api_key = os.getenv("OPENAI_API_KEY")
 
-if not api_key:
+# =========================================================
+# OpenAI接続
+# =========================================================
+
+try:
+    api_key = st.secrets["OPENAI_API_KEY"]
+    client = OpenAI(api_key=api_key)
+except Exception:
     st.error("OpenAI APIキーが設定されていません。")
     st.stop()
 
-client = OpenAI(api_key=api_key)
 
-st.subheader("LPのHTMLを貼り付け")
+# =========================================================
+# AIへ送る共通処理
+# =========================================================
+
+def ask_ai(instruction, html):
+
+    response = client.responses.create(
+        model="gpt-5.4-mini",
+        instructions=instruction,
+        input=html
+    )
+
+    return response.output_text
+
+
+# =========================================================
+# 入力欄
+# =========================================================
+
+st.subheader("① LPのHTMLを貼り付け")
 
 html = st.text_area(
     "分析・改善したいLPのHTMLを貼り付けてください",
     height=400,
-    placeholder="ここに <!DOCTYPE html> から </html> まで貼り付けます"
+    placeholder="""<!DOCTYPE html>
+<html>
+<head>
+...
+</head>
+<body>
+...
+</body>
+</html>"""
 )
+
+
+# =========================================================
+# ボタン
+# =========================================================
 
 col1, col2 = st.columns(2)
 
 with col1:
-    analyze = st.button(
+    analyze_button = st.button(
         "🔍 LPをAI分析",
         use_container_width=True
     )
 
 with col2:
-    improve = st.button(
+    improve_button = st.button(
         "✨ 改善版HTMLを作る",
         use_container_width=True
     )
 
-if analyze:
+
+# =========================================================
+# AI分析
+# =========================================================
+
+if analyze_button:
 
     if not html.strip():
-        st.warning("LPのHTMLを貼り付けてください。")
+
+        st.warning("HTMLを貼り付けてください。")
 
     else:
+
         with st.spinner("AIがLPを分析しています..."):
 
-            prompt = f"""
-あなたはLP改善・Webマーケティング・コピーライティングの専門家です。
+            try:
 
-以下のLPを分析してください。
+                instruction = """
+あなたは日本トップクラスの
+LPマーケター・コピーライター・Web制作責任者です。
 
-特に次の項目を評価してください。
+入力されたLPのHTMLを分析してください。
+
+目的は
+「見た目を褒めること」ではなく
+「問い合わせ・予約・購入を増やすこと」です。
+
+次の項目を100点満点で評価してください。
 
 1. ファーストビュー
-2. ターゲットへの訴求力
-3. 信頼性
-4. LINE予約への導線
-5. CTAの強さ
-6. 料金表示
-7. スマートフォンでの読みやすさ
-8. SEO
-9. コンバージョン率改善
-10. 医療・美容系LPとして誤解を招きやすい表現
+2. キャッチコピー
+3. ターゲットの明確さ
+4. ベネフィット
+5. 信頼性
+6. CTA
+7. スマートフォンでの見やすさ
+8. 不安解消
+9. 料金・オファー
+10. 成約導線
 
-100点満点で採点してください。
+最初に
+
+【総合点】
+○○ / 100点
+
+と表示してください。
 
 その後、
 
-【最優先で直すところ】
-【改善すると予約率が上がりそうなところ】
 【良いところ】
-【具体的な修正文】
 
-の順番で、日本語で分かりやすく回答してください。
+【重大な問題点】
 
-LP HTML:
+【最優先で直す3項目】
 
-{html}
+【具体的な改善案】
+
+【おすすめキャッチコピー】
+
+【CTA改善案】
+
+【成約率を上げるために追加すべき要素】
+
+の順番で回答してください。
+
+抽象論ではなく、
+実際にLPを書き換えられるレベルまで
+具体的に提案してください。
+
+医療・健康関連LPの場合は、
+誇大表現や効果を保証する表現にも注意してください。
 """
 
-            try:
-                response = client.responses.create(
-                    model="gpt-5.6-luna",
-                    input=prompt
-                )
+                result = ask_ai(instruction, html)
 
-                st.success("分析完了！")
-                st.markdown(response.output_text)
+                st.success("分析完了")
+
+                st.subheader("📊 AI分析結果")
+
+                st.markdown(result)
 
             except Exception as e:
-                st.error(f"エラーが発生しました: {e}")
+
+                st.error(f"エラーが発生しました：{e}")
 
 
-if improve:
+# =========================================================
+# 改善HTML生成
+# =========================================================
+
+if improve_button:
 
     if not html.strip():
-        st.warning("LPのHTMLを貼り付けてください。")
+
+        st.warning("HTMLを貼り付けてください。")
 
     else:
-        with st.spinner("改善版LPを作成しています..."):
 
-            prompt = f"""
-あなたはプロのWebマーケター兼フロントエンドエンジニアです。
-
-以下のLPを改善してください。
-
-目的は問い合わせ・LINE予約率を高めることです。
-
-条件：
-
-・元のデザインの良い部分は残す
-・スマートフォン最優先
-・ファーストビューを強化
-・LINE予約導線を改善
-・信頼性を高める
-・読みやすくする
-・過度な効果保証や断定表現を避ける
-・存在が確認できない口コミ、資格、経歴、実績を新しく作らない
-・HTML全体を完成形で出力する
-・説明文は不要
-・最初から最後までHTMLだけを出力する
-
-元のHTML:
-
-{html}
-"""
+        with st.spinner(
+            "AIが成約率を意識した改善版LPを作っています..."
+        ):
 
             try:
-                response = client.responses.create(
-                    model="gpt-5.6-luna",
-                    input=prompt
+
+                instruction = """
+あなたはトップクラスの
+LPマーケター、コピーライター、
+UI/UXデザイナー、Webエンジニアです。
+
+入力されたLPのHTMLを分析して、
+問い合わせ・予約・購入につながりやすい
+改善版HTMLを作成してください。
+
+重要条件：
+
+・元LPの良い部分は残す
+・ファーストビューを強化
+・誰向けのサービスか明確にする
+・ベネフィットを分かりやすくする
+・CTAを強化
+・スマートフォン最優先
+・読みやすい余白
+・料金を分かりやすくする
+・FAQを改善
+・信頼性を高める
+・問い合わせまでの導線を短くする
+・不自然な煽り表現は禁止
+・存在しない口コミや実績を捏造しない
+・医療効果を保証しない
+・元HTMLに存在しない資格や実績を勝手に追加しない
+
+特に重要：
+
+ユーザーがそのまま保存して使える
+完全なHTMLを生成してください。
+
+<!DOCTYPE html>
+から
+</html>
+まで省略せず生成してください。
+
+説明文をHTMLの前後に付けず、
+完成したHTMLコードだけを出力してください。
+"""
+
+                improved_html = ask_ai(
+                    instruction,
+                    html
                 )
 
-                improved_html = response.output_text
-                st.session_state["improved_html"] = improved_html
-
                 # Markdownコードブロックが付いた場合に除去
-                improved_html = improved_html.replace(
-                    "```html", ""
-                ).replace(
-                    "```", ""
-                ).strip()
+                improved_html = improved_html.strip()
 
-                st.success("改善版HTMLが完成しました！")
+                if improved_html.startswith("```html"):
+                    improved_html = improved_html[7:]
+
+                elif improved_html.startswith("```"):
+                    improved_html = improved_html[3:]
+
+                if improved_html.endswith("```"):
+                    improved_html = improved_html[:-3]
+
+                improved_html = improved_html.strip()
+
+                st.success("改善版LPが完成しました！")
+
+                st.subheader("🚀 改善版LPコード")
+
+                st.code(
+                    improved_html,
+                    language="html"
+                )
 
                 st.download_button(
-                    "💾 改善版HTMLを保存",
+                    label="⬇️ 改善版HTMLをダウンロード",
                     data=improved_html,
                     file_name="improved_lp.html",
                     mime="text/html",
                     use_container_width=True
                 )
 
-                with st.expander("改善版HTMLを見る"):
-                    st.code(improved_html, language="html")
-
             except Exception as e:
-                st.error(f"エラーが発生しました: {e}")
+
+                st.error(f"エラーが発生しました：{e}")
+
+
+# =========================================================
+# 使い方
+# =========================================================
 
 st.divider()
-st.subheader("👀 改善版LPをプレビュー")
 
-if "improved_html" in st.session_state:
-    components.html(
-        st.session_state["improved_html"],
-        height=800,
-        scrolling=True
-    )
-else:
-    st.info("「✨ 改善版HTMLを作る」を押すと、ここにLPが表示されます。")
+st.subheader("💡 使い方")
 
+st.markdown("""
+**STEP 1**  
+現在使っているLPのHTMLを貼り付ける
 
-# ==================================================
-# 広告効果分析
-# ==================================================
+**STEP 2**  
+「🔍 LPをAI分析」を押す
 
-st.divider()
-st.header("📊 広告効果分析")
+**STEP 3**  
+改善ポイントを確認する
 
-st.write("毎月の広告データを入力すると、広告効果を自動計算します。")
+**STEP 4**  
+「✨ 改善版HTMLを作る」を押す
 
-ad_cost = st.number_input(
-    "広告費（円）",
-    min_value=0,
-    value=30000,
-    step=1000
-)
-
-lp_views = st.number_input(
-    "LP閲覧数",
-    min_value=0,
-    value=0,
-    step=1
-)
-
-line_clicks = st.number_input(
-    "LINEクリック数",
-    min_value=0,
-    value=0,
-    step=1
-)
-
-inquiries = st.number_input(
-    "問い合わせ数",
-    min_value=0,
-    value=0,
-    step=1
-)
-
-reservations = st.number_input(
-    "新規予約数",
-    min_value=0,
-    value=0,
-    step=1
-)
-
-sales = st.number_input(
-    "広告経由の売上（円）",
-    min_value=0,
-    value=0,
-    step=1000
-)
-
-if st.button("📈 広告効果を計算"):
-
-    st.subheader("分析結果")
-
-    if reservations > 0:
-        cpa = ad_cost / reservations
-        st.metric("1予約あたり広告費（CPA）", f"{cpa:,.0f}円")
-    else:
-        st.metric("1予約あたり広告費（CPA）", "予約なし")
-
-    if lp_views > 0:
-        line_rate = line_clicks / lp_views * 100
-        st.metric("LP → LINEクリック率", f"{line_rate:.1f}%")
-
-    if inquiries > 0:
-        reservation_rate = reservations / inquiries * 100
-        st.metric("問い合わせ → 予約率", f"{reservation_rate:.1f}%")
-
-    if ad_cost > 0:
-        roas = sales / ad_cost * 100
-        st.metric("ROAS（広告費に対する売上）", f"{roas:.0f}%")
-
-        if roas >= 300:
-            st.success("🟢 広告効率はかなり良好です。広告費増額を検討できます。")
-        elif roas >= 200:
-            st.success("🟢 広告は良い状態です。継続しながら改善しましょう。")
-        elif roas >= 100:
-            st.warning("🟡 売上は広告費を上回っていますが、改善余地があります。")
-        else:
-            st.error("🔴 広告費が売上を上回っています。LP・広告・予約導線を見直しましょう。")
+**STEP 5**  
+完成したHTMLをダウンロードする
+""")
