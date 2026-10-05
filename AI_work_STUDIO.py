@@ -254,6 +254,20 @@ UI/UXデザイナー、Webエンジニアです。
                     language="html"
                 )
 
+                st.divider()
+
+                st.subheader("👀 改善版LPプレビュー")
+
+                st.caption("AIが作成した改善版LPを実際の表示で確認できます。")
+
+                st.components.v1.html(
+                    improved_html,
+                    height=800,
+                    scrolling=True
+                 )
+
+                st.divider()                
+                
                 st.download_button(
                     label="⬇️ 改善版HTMLをダウンロード",
                     data=improved_html,
@@ -291,3 +305,35 @@ st.markdown("""
 **STEP 5**  
 完成したHTMLをダウンロードする
 """)
+# ==========================================================
+# 改善版LP プレビュー・ダウンロード
+# ==========================================================
+
+if "improved_html" in st.session_state:
+
+    improved_html = st.session_state["improved_html"]
+
+    st.divider()
+
+    st.subheader("👀 改善版LPプレビュー")
+
+    st.caption("AIが作成した改善版LPを実際の表示で確認できます。")
+
+    # プレビュー表示
+    st.components.v1.html(
+        improved_html,
+        height=800,
+        scrolling=True
+    )
+
+    st.divider()
+
+    st.subheader("📥 改善版LPを保存")
+
+    st.download_button(
+        label="⬇️ 改善版HTMLをダウンロード",
+        data=improved_html,
+        file_name="ayumi_improved_lp.html",
+        mime="text/html",
+        use_container_width=True
+    )
