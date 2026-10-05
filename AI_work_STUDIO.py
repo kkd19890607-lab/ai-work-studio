@@ -376,8 +376,8 @@ LINE予約ボタンをもっと目立たせて
         else:
 
             with st.spinner("AIがLPを再修正しています..."):
-
-                try:
+                
+                    try:
 
                     current_html = st.session_state["improved_html"]
 
