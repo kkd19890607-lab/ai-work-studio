@@ -244,7 +244,7 @@ UI/UXデザイナー、Webエンジニアです。
                     improved_html = improved_html[:-3]
 
                 improved_html = improved_html.strip()
-
+                st.session_state["improved_html"] = improved_html
                 st.success("改善版LPが完成しました！")
 
                 st.subheader("🚀 改善版LPコード")
@@ -337,3 +337,111 @@ if "improved_html" in st.session_state:
         mime="text/html",
         use_container_width=True
     )
+# ============================================================
+# AI追加修正機能
+# ============================================================
+
+if "improved_html" in st.session_state:
+
+    st.divider()
+
+    st.header("🤖 AIに追加修正を指示")
+
+    st.caption(
+        "現在の改善版LPに、さらに変更したい内容を入力してください。"
+    )
+
+    revision_instruction = st.text_area(
+        "修正内容",
+        placeholder="""例：
+もっと高級感のあるデザインにして
+LINE予約ボタンをもっと目立たせて
+料金を松・竹・梅の3コースにして
+スマホ表示をもっと見やすくして""",
+        height=150,
+        key="revision_instruction"
+    )
+
+    revise_button = st.button(
+        "✨ AIでもう一度修正する",
+        use_container_width=True
+    )
+
+    if revise_button:
+
+        if not revision_instruction.strip():
+
+            st.warning("修正したい内容を入力してください。")
+
+        else:
+
+            with st.spinner("AIがLPを再修正しています..."):
+
+                try:
+
+                    current_html = st.session_state["improved_html"]
+
+                    prompt = f"""
+あなたはLP制作・Webデザイン・コンバージョン改善の専門家です。
+
+以下のHTMLは現在のLPです。
+
+ユーザーの修正指示に従って、
+HTML全体を修正してください。
+
+【修正指示】
+{revision_instruction}
+
+【重要】
+・現在の良い部分は残す
+・スマートフォン表示を重視する
+・予約・問い合わせにつながる構成にする
+・HTMLを途中で省略しない
+・DOCTYPEからhtml終了タグまで完全なHTMLを出力する
+・Markdownの```htmlは付けない
+・説明文は不要
+・完成したHTMLコードだけを出力する
+"""
+
+                    revised_html = ask_ai(
+                        prompt,
+                        current_html
+                    )
+
+                    revised_html = revised_html.strip()
+
+                    # Markdownコードブロック除去
+                    if revised_html.startswith("```html"):
+                        revised_html = revised_html[7:]
+
+                    elif revised_html.startswith("```"):
+                        revised_html = revised_html[3:]
+
+                    if revised_html.endswith("```"):
+                        revised_html = revised_html[:-3]
+
+                    revised_html = revised_html.strip()
+
+                    # 最新版に更新
+                    st.session_state["improved_html"] = revised_html
+
+                    st.success("🎉 AIによる追加修正が完了しました！")
+
+                    st.subheader("👀 最新版LPプレビュー")
+
+                    st.components.v1.html(
+                        revised_html,
+                        height=800,
+                        scrolling=True
+                    )
+
+                    st.download_button(
+                        label="⬇️ 最新版HTMLをダウンロード",
+                        data=revised_html,
+                        file_name="ayumi_lp_latest.html",
+                        mime="text/html",
+                        use_container_width=True
+                    )
+
+                    except Exception as e:
+                        st.error(f"追加修正中にエラーが発生しました: {e}")
